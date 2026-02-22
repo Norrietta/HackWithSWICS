@@ -5,843 +5,619 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>PixelPact – Squad Productivity</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg:     '#0f0f1a',
+                        card:   '#1a1a2e',
+                        card2:  '#16213e',
+                        accent: '#e94560',
+                        neon:   '#0aff9d',
+                        gold:   '#ffd93d',
+                        sky:    '#4cc9f0',
+                        violet: '#a855f7',
+                        border: '#2a2a4a',
+                        dim:    '#6b6b9a',
+                        ink:    '#e0e0ff',
+                    },
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'monospace'],
+                        sans:  ['"DM Sans"', 'sans-serif'],
+                    },
+                    keyframes: {
+                        blink:  { '0%,100%':{ opacity:'1' }, '50%':{ opacity:'0' } },
+                        float:  { '0%,100%':{ transform:'translateY(0)' }, '50%':{ transform:'translateY(-5px)' } },
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                        float: 'float 3s ease-in-out infinite',
+                    },
+                    boxShadow: {
+                        phone: '0 0 0 6px #1a1a2e, 0 0 0 8px #333, 0 30px 80px rgba(0,0,0,0.8)',
+                        pixel: '4px 4px 0 rgba(0,0,0,0.5)',
+                        neon:  '0 0 24px rgba(10,255,157,0.2)',
+                        sky:   '0 0 24px rgba(76,201,240,0.2)',
+                    },
+                }
+            }
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <!--
+      Minimal style block: only for things Tailwind cannot express:
+      - body::before pseudo-element (scanlines)
+      - clip-path on rank hexagons
+      - prog-fill::after pseudo-element (pixel cursor on bars)
+      - scrollbar hiding
+      - page show/hide toggle
+    -->
     <style>
-        :root {
-            --bg: #0f0f1a;
-            --card: #1a1a2e;
-            --card2: #16213e;
-            --accent: #e94560;
-            --green: #0aff9d;
-            --yellow: #ffd93d;
-            --blue: #4cc9f0;
-            --purple: #a855f7;
-            --border: #2a2a4a;
-            --text: #e0e0ff;
-            --muted: #6b6b9a;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: #070714;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            padding: 40px 20px;
-            font-family: 'DM Sans', sans-serif;
-            color: var(--text);
-        }
-        /* Scanline overlay */
         body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-            pointer-events: none;
-            z-index: 9999;
+            content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+            background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
         }
-        .pixel { font-family: 'Press Start 2P', monospace; }
-
-        /* Mobile frame */
-        .phone-frame {
-            width: 390px;
-            min-height: 844px;
-            background: var(--bg);
-            border-radius: 48px;
-            border: 3px solid #333;
-            box-shadow:
-                    0 0 0 6px #1a1a2e,
-                    0 0 0 8px #333,
-                    0 30px 80px rgba(0,0,0,0.8),
-                    inset 0 0 30px rgba(0,0,0,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-        .notch {
-            width: 120px;
-            height: 30px;
-            background: #111;
-            border-radius: 0 0 20px 20px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 10;
-        }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 24px 0;
-            font-size: 10px;
-            color: var(--muted);
-        }
-
-        /* Screen content */
-        .screen { overflow-y: auto; height: calc(844px - 90px); padding-bottom: 80px; }
-        .screen::-webkit-scrollbar { display: none; }
-
-        /* Nav */
-        .bottom-nav {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            background: rgba(15,15,26,0.95);
-            border-top: 2px solid var(--border);
-            display: flex;
-            padding: 12px 0 20px;
-            backdrop-filter: blur(10px);
-        }
-        .nav-btn {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 8px;
-            font-family: 'Press Start 2P', monospace;
-            transition: color 0.2s;
-        }
-        .nav-btn.active { color: var(--accent); }
-        .nav-btn svg { width: 20px; height: 20px; }
-
-        /* Page sections */
-        .page { display: none; }
-        .page.active { display: block; }
-
-        /* Cards */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 16px;
-        }
-
-        /* Pixel border effect */
-        .pixel-border {
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-        }
-
-        /* Progress bars */
-        .prog-track {
-            height: 10px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 0;
-            overflow: visible;
-            position: relative;
-        }
-        .prog-fill {
-            height: 100%;
-            position: relative;
-            transition: width 1s cubic-bezier(0.4,0,0.2,1);
-        }
+        .rank-hex { clip-path:polygon(0 25%,25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%); }
+        .prog-fill { position:relative; height:100%; transition:width 1s cubic-bezier(.4,0,.2,1); }
         .prog-fill::after {
-            content: '';
-            position: absolute;
-            right: -2px;
-            top: -3px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            clip-path: polygon(0 25%, 25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%);
+            content:''; position:absolute; right:-2px; top:-3px; width:14px; height:14px; background:white;
+            clip-path:polygon(0 25%,25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%);
         }
-
-        /* Rank badge */
-        .rank-badge {
-            width: 36px; height: 36px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px;
-            font-family: 'Press Start 2P', monospace;
-            clip-path: polygon(0 25%, 25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%);
-        }
-
-        /* Score ring */
-        .score-ring {
-            width: 70px; height: 70px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column;
-            position: relative;
-            font-family: 'Press Start 2P', monospace;
-        }
-
-        /* Pixel avatar */
-        .pixel-avatar {
-            width: 44px; height: 44px;
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px;
-            border: 2px solid var(--border);
-        }
-
-        /* Mission card */
-        .mission-card {
-            border-left: 4px solid var(--accent);
-            background: var(--card2);
-            border-radius: 0 12px 12px 0;
-            padding: 14px;
-            position: relative;
-            overflow: hidden;
-        }
-        .mission-card::before {
-            content: '';
-            position: absolute;
-            top: 0; right: 0;
-            width: 60px; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(233,69,96,0.05));
-        }
-
-        /* Glow effects */
-        .glow-green { box-shadow: 0 0 20px rgba(10,255,157,0.2); }
-        .glow-red { box-shadow: 0 0 20px rgba(233,69,96,0.2); }
-        .glow-blue { box-shadow: 0 0 20px rgba(76,201,240,0.2); }
-
-        /* Pixel dots decoration */
-        .pixel-dots {
-            display: grid;
-            grid-template-columns: repeat(6, 6px);
-            gap: 4px;
-            opacity: 0.15;
-        }
-        .pixel-dot { width: 6px; height: 6px; background: var(--accent); }
-
-        /* Star */
-        .star { color: var(--yellow); }
-
-        /* Animations */
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(10,255,157,0.4)} 70%{box-shadow:0 0 0 10px rgba(10,255,157,0)} 100%{box-shadow:0 0 0 0 rgba(10,255,157,0)} }
-        .blink { animation: blink 1s step-end infinite; }
-        .float { animation: float 3s ease-in-out infinite; }
-        .pulse-ring { animation: pulse-ring 2s infinite; }
-
-        /* Tag */
-        .tag {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-family: 'Press Start 2P', monospace;
-        }
-
-        /* Toggle tabs */
-        .tab-group { display: flex; background: var(--card2); border-radius: 10px; padding: 3px; }
-        .tab-btn {
-            flex: 1; padding: 8px; border: none; background: transparent; cursor: pointer;
-            color: var(--muted); border-radius: 8px; font-size: 9px;
-            font-family: 'Press Start 2P', monospace; transition: all 0.2s;
-        }
-        .tab-btn.active { background: var(--accent); color: white; }
-
-        /* Divider */
-        .pixel-divider { height: 2px; background: repeating-linear-gradient(90deg, var(--border) 0, var(--border) 8px, transparent 8px, transparent 12px); margin: 16px 0; }
-
-        /* Checkbox pixel */
-        .px-check {
-            width: 18px; height: 18px;
-            border: 2px solid var(--muted);
-            border-radius: 3px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; flex-shrink: 0;
-            transition: all 0.15s;
-        }
-        .px-check.done { border-color: var(--green); background: rgba(10,255,157,0.15); }
-
-        /* XP bar */
-        .xp-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
-        .xp-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--blue)); border-radius: 3px; }
+        .screen::-webkit-scrollbar { display:none; }
+        .page { display:none; }
+        .page.active { display:block; }
+        .pixel-divider { height:2px; background:repeating-linear-gradient(90deg,#2a2a4a 0,#2a2a4a 8px,transparent 8px,transparent 12px); }
     </style>
 </head>
-<body>
 
-<!-- Phone Frame -->
-<div class="phone-frame">
+<body class="bg-[#070714] flex justify-center items-start min-h-screen py-10 px-5 font-sans text-ink">
 
-    <!-- Notch + status -->
-    <div class="notch"></div>
-    <div class="status-bar">
+<!-- ░░░ PHONE FRAME ░░░ -->
+<div class="relative w-[390px] min-h-[844px] bg-bg rounded-[48px] border-[3px] border-[#333] shadow-phone overflow-hidden">
+
+    <!-- Notch -->
+    <div class="w-28 h-7 bg-[#111] rounded-b-2xl mx-auto z-10 relative"></div>
+
+    <!-- Status bar -->
+    <div class="flex justify-between items-center px-6 pt-2 pb-0 text-[10px] text-dim">
         <span>9:41</span>
-        <span class="pixel" style="font-size:7px; color: var(--green);">PIXELPACT</span>
+        <span class="font-pixel text-[7px] text-neon">PIXELPACT</span>
         <span>⬛⬛⬛ 🔋</span>
     </div>
 
-    <!-- Screen content -->
-    <div class="screen">
+    <!-- Scrollable screen -->
+    <div class="screen overflow-y-auto pb-20" style="height:calc(844px - 90px)">
 
-        <!-- ══════════ LEADERBOARD PAGE ══════════ -->
+        <!-- ═══════════════════════════════
+             PAGE: HOME / LEADERBOARD
+        ════════════════════════════════ -->
         <div class="page active" id="page-home">
-            <div style="padding: 16px;">
+            <div class="p-4">
 
                 <!-- Header -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div class="flex justify-between items-center mb-5">
                     <div>
-                        <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:4px;">WEEK 34 · SUN RECAP IN</div>
-                        <div class="pixel" style="font-size:13px; color:var(--text);">LEADERBOARD</div>
+                        <p class="font-pixel text-[7px] text-dim mb-1">WEEK 34 · SUN RECAP IN</p>
+                        <p class="font-pixel text-[13px]">LEADERBOARD</p>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:10px; color:var(--muted);">ends</div>
-                        <div class="pixel blink" style="font-size:10px; color:var(--accent);">2D 14H</div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-dim">ends</p>
+                        <p class="font-pixel text-[10px] text-accent animate-blink">2D 14H</p>
                     </div>
                 </div>
 
-                <!-- Top 3 podium -->
-                <div class="card glow-green pixel-border" style="margin-bottom:14px; background: linear-gradient(135deg, #1a1a2e, #0f1923); border-color: rgba(10,255,157,0.2);">
-                    <div style="display:flex; justify-content:center; align-items:flex-end; gap:12px; padding:8px 0 4px;">
+                <!-- Podium -->
+                <div class="bg-gradient-to-br from-card to-[#0f1923] border border-neon/20 rounded-2xl shadow-neon shadow-pixel mb-4 p-4">
+                    <div class="flex justify-center items-end gap-3">
                         <!-- 2nd -->
-                        <div style="text-align:center; flex:1;">
-                            <div style="font-size:24px; margin-bottom:4px;">🐸</div>
-                            <div style="font-size:11px; margin-bottom:2px;">Alex</div>
-                            <div class="pixel" style="font-size:8px; color:var(--blue);">8,420</div>
-                            <div style="height: 50px; background: rgba(76,201,240,0.15); border-top: 3px solid var(--blue); margin-top:8px; display:flex; align-items:center; justify-content:center;">
-                                <span class="pixel" style="font-size:14px; color:var(--blue);">2</span>
+                        <div class="flex-1 text-center">
+                            <div class="text-2xl mb-1">🐸</div>
+                            <p class="text-[11px] mb-0.5">Alex</p>
+                            <p class="font-pixel text-[8px] text-sky">8,420</p>
+                            <div class="h-12 bg-sky/15 border-t-2 border-sky mt-2 flex items-center justify-center">
+                                <span class="font-pixel text-[13px] text-sky">2</span>
                             </div>
                         </div>
                         <!-- 1st -->
-                        <div style="text-align:center; flex:1; position:relative;">
-                            <div class="float" style="font-size:30px; margin-bottom:4px;">👾</div>
-                            <div style="font-size:12px; font-weight:600; margin-bottom:2px;">Jordan</div>
-                            <div class="pixel" style="font-size:9px; color:var(--green);">9,810</div>
-                            <div style="height: 70px; background: rgba(10,255,157,0.12); border-top: 3px solid var(--green); margin-top:8px; display:flex; align-items:center; justify-content:center; border-radius:4px 4px 0 0; position:relative;">
-                                <span class="pixel" style="font-size:16px; color:var(--green);">1</span>
-                                <div style="position:absolute; top:-18px; font-size:16px;">👑</div>
+                        <div class="flex-1 text-center relative">
+                            <div class="text-[30px] mb-1 animate-float">👾</div>
+                            <p class="text-[12px] font-semibold mb-0.5">Jordan</p>
+                            <p class="font-pixel text-[9px] text-neon">9,810</p>
+                            <div class="h-16 bg-neon/10 border-t-2 border-neon mt-2 flex items-center justify-center rounded-t relative">
+                                <span class="font-pixel text-[15px] text-neon">1</span>
+                                <span class="absolute -top-5 text-base">👑</span>
                             </div>
                         </div>
                         <!-- 3rd -->
-                        <div style="text-align:center; flex:1;">
-                            <div style="font-size:24px; margin-bottom:4px;">🦊</div>
-                            <div style="font-size:11px; margin-bottom:2px;">Sam</div>
-                            <div class="pixel" style="font-size:8px; color:var(--yellow);">7,100</div>
-                            <div style="height: 36px; background: rgba(255,217,61,0.12); border-top: 3px solid var(--yellow); margin-top:8px; display:flex; align-items:center; justify-content:center;">
-                                <span class="pixel" style="font-size:12px; color:var(--yellow);">3</span>
+                        <div class="flex-1 text-center">
+                            <div class="text-2xl mb-1">🦊</div>
+                            <p class="text-[11px] mb-0.5">Sam</p>
+                            <p class="font-pixel text-[8px] text-gold">7,100</p>
+                            <div class="h-9 bg-gold/10 border-t-2 border-gold mt-2 flex items-center justify-center">
+                                <span class="font-pixel text-[11px] text-gold">3</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Full list -->
-                <div style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Full ranked list -->
+                <div class="flex flex-col gap-2.5">
 
-                    <!-- User card template -->
-                    <div class="card pixel-border" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="goToProfile('Jordan')">
-                        <div class="rank-badge" style="background: var(--green); color: #000;">1</div>
-                        <div class="pixel-avatar" style="background: rgba(10,255,157,0.1);">👾</div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-weight:600;">Jordan <span style="font-size:10px;">✨ YOU</span></div>
-                                <div class="pixel" style="font-size:10px; color:var(--green);">9,810</div>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-3 flex items-center gap-3 cursor-pointer" onclick="goToProfile('Jordan')">
+                        <div class="rank-hex w-9 h-9 flex items-center justify-center bg-neon font-pixel text-[9px] text-black shrink-0">1</div>
+                        <div class="w-11 h-11 rounded-lg bg-neon/10 border border-border flex items-center justify-center text-xl shrink-0">👾</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm">Jordan <span class="text-[10px] text-neon">✨ YOU</span></span>
+                                <span class="font-pixel text-[9px] text-neon">9,810</span>
                             </div>
-                            <div class="prog-track">
-                                <div class="prog-fill" style="width:98%; background: linear-gradient(90deg, var(--green), #00d4aa);"></div>
+                            <div class="h-2.5 bg-white/5 overflow-visible relative">
+                                <div class="prog-fill bg-gradient-to-r from-neon to-teal-400" style="width:98%"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card pixel-border" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="goToProfile('Alex')">
-                        <div class="rank-badge" style="background: var(--blue); color: #000;">2</div>
-                        <div class="pixel-avatar" style="background: rgba(76,201,240,0.1);">🐸</div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-weight:600;">Alex</div>
-                                <div class="pixel" style="font-size:10px; color:var(--blue);">8,420</div>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-3 flex items-center gap-3 cursor-pointer" onclick="goToProfile('Alex')">
+                        <div class="rank-hex w-9 h-9 flex items-center justify-center bg-sky font-pixel text-[9px] text-black shrink-0">2</div>
+                        <div class="w-11 h-11 rounded-lg bg-sky/10 border border-border flex items-center justify-center text-xl shrink-0">🐸</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm">Alex</span>
+                                <span class="font-pixel text-[9px] text-sky">8,420</span>
                             </div>
-                            <div class="prog-track">
-                                <div class="prog-fill" style="width:84%; background: linear-gradient(90deg, var(--blue), #7dd3fc);"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card pixel-border" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="goToProfile('Sam')">
-                        <div class="rank-badge" style="background: var(--yellow); color: #000;">3</div>
-                        <div class="pixel-avatar" style="background: rgba(255,217,61,0.1);">🦊</div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-weight:600;">Sam</div>
-                                <div class="pixel" style="font-size:10px; color:var(--yellow);">7,100</div>
-                            </div>
-                            <div class="prog-track">
-                                <div class="prog-fill" style="width:71%; background: linear-gradient(90deg, var(--yellow), #fbbf24);"></div>
+                            <div class="h-2.5 bg-white/5 overflow-visible relative">
+                                <div class="prog-fill bg-gradient-to-r from-sky to-blue-300" style="width:84%"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card pixel-border" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="goToProfile('Maya')">
-                        <div class="rank-badge" style="background: var(--purple); color: #fff;">4</div>
-                        <div class="pixel-avatar" style="background: rgba(168,85,247,0.1);">🐼</div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-weight:600;">Maya</div>
-                                <div class="pixel" style="font-size:10px; color:var(--purple);">5,540</div>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-3 flex items-center gap-3 cursor-pointer" onclick="goToProfile('Sam')">
+                        <div class="rank-hex w-9 h-9 flex items-center justify-center bg-gold font-pixel text-[9px] text-black shrink-0">3</div>
+                        <div class="w-11 h-11 rounded-lg bg-gold/10 border border-border flex items-center justify-center text-xl shrink-0">🦊</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm">Sam</span>
+                                <span class="font-pixel text-[9px] text-gold">7,100</span>
                             </div>
-                            <div class="prog-track">
-                                <div class="prog-fill" style="width:55%; background: linear-gradient(90deg, var(--purple), #c084fc);"></div>
+                            <div class="h-2.5 bg-white/5 overflow-visible relative">
+                                <div class="prog-fill bg-gradient-to-r from-gold to-yellow-300" style="width:71%"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card pixel-border" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="goToProfile('Chris')">
-                        <div class="rank-badge" style="background: var(--accent); color: #fff;">5</div>
-                        <div class="pixel-avatar" style="background: rgba(233,69,96,0.1);">🐙</div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-weight:600;">Chris</div>
-                                <div class="pixel" style="font-size:10px; color:var(--accent);">3,200</div>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-3 flex items-center gap-3 cursor-pointer" onclick="goToProfile('Maya')">
+                        <div class="rank-hex w-9 h-9 flex items-center justify-center bg-violet font-pixel text-[9px] text-white shrink-0">4</div>
+                        <div class="w-11 h-11 rounded-lg bg-violet/10 border border-border flex items-center justify-center text-xl shrink-0">🐼</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm">Maya</span>
+                                <span class="font-pixel text-[9px] text-violet">5,540</span>
                             </div>
-                            <div class="prog-track">
-                                <div class="prog-fill" style="width:32%; background: linear-gradient(90deg, var(--accent), #f87171);"></div>
+                            <div class="h-2.5 bg-white/5 overflow-visible relative">
+                                <div class="prog-fill bg-gradient-to-r from-violet to-purple-300" style="width:55%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-3 flex items-center gap-3 cursor-pointer" onclick="goToProfile('Chris')">
+                        <div class="rank-hex w-9 h-9 flex items-center justify-center bg-accent font-pixel text-[9px] text-white shrink-0">5</div>
+                        <div class="w-11 h-11 rounded-lg bg-accent/10 border border-border flex items-center justify-center text-xl shrink-0">🐙</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm">Chris</span>
+                                <span class="font-pixel text-[9px] text-accent">3,200</span>
+                            </div>
+                            <div class="h-2.5 bg-white/5 overflow-visible relative">
+                                <div class="prog-fill bg-gradient-to-r from-accent to-rose-400" style="width:32%"></div>
                             </div>
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Score legend -->
-                <div class="pixel-divider"></div>
-                <div style="font-size:10px; color:var(--muted); text-align:center; margin-bottom:8px;">HOW POINTS WORK</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div class="card" style="text-align:center; padding:10px 8px;">
-                        <div style="font-size:16px; margin-bottom:4px;">😴</div>
-                        <div class="pixel" style="font-size:7px; color:var(--blue);">SLEEP</div>
-                        <div style="font-size:10px; color:var(--muted); margin-top:2px;">+25/hr</div>
+                <!-- Points legend -->
+                <div class="pixel-divider my-5"></div>
+                <p class="font-pixel text-[8px] text-dim text-center mb-3">HOW POINTS WORK</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-card border border-border rounded-xl p-3 text-center">
+                        <div class="text-2xl mb-1">😴</div>
+                        <p class="font-pixel text-[7px] text-sky">SLEEP</p>
+                        <p class="text-[10px] text-dim mt-1">+25 / hr</p>
                     </div>
-                    <div class="card" style="text-align:center; padding:10px 8px;">
-                        <div style="font-size:16px; margin-bottom:4px;">👟</div>
-                        <div class="pixel" style="font-size:7px; color:var(--green);">STEPS</div>
-                        <div style="font-size:10px; color:var(--muted); margin-top:2px;">+1/100 steps</div>
+                    <div class="bg-card border border-border rounded-xl p-3 text-center">
+                        <div class="text-2xl mb-1">👟</div>
+                        <p class="font-pixel text-[7px] text-neon">STEPS</p>
+                        <p class="text-[10px] text-dim mt-1">+1 / 100 steps</p>
                     </div>
-                    <div class="card" style="text-align:center; padding:10px 8px;">
-                        <div style="font-size:16px; margin-bottom:4px;">🏋️</div>
-                        <div class="pixel" style="font-size:7px; color:var(--yellow);">EXERCISE</div>
-                        <div style="font-size:10px; color:var(--muted); margin-top:2px;">+50/hr</div>
+                    <div class="bg-card border border-border rounded-xl p-3 text-center">
+                        <div class="text-2xl mb-1">🏋️</div>
+                        <p class="font-pixel text-[7px] text-gold">EXERCISE</p>
+                        <p class="text-[10px] text-dim mt-1">+50 / hr</p>
                     </div>
-                    <div class="card" style="text-align:center; padding:10px 8px;">
-                        <div style="font-size:16px; margin-bottom:4px;">📱</div>
-                        <div class="pixel" style="font-size:7px; color:var(--accent);">SCREEN TIME</div>
-                        <div style="font-size:10px; color:var(--muted); margin-top:2px;">-30/hr over 2h</div>
+                    <div class="bg-card border border-border rounded-xl p-3 text-center">
+                        <div class="text-2xl mb-1">📱</div>
+                        <p class="font-pixel text-[7px] text-accent">SCREEN TIME</p>
+                        <p class="text-[10px] text-dim mt-1">-30 / hr over 2h</p>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <!-- ══════════ MY STATS PAGE ══════════ -->
+        <!-- ═══════════════════════════════
+             PAGE: MY STATS
+        ════════════════════════════════ -->
         <div class="page" id="page-stats">
-            <div style="padding: 16px;">
+            <div class="p-4">
 
-                <div style="margin-bottom:20px;">
-                    <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:4px;">WEEK 34</div>
-                    <div class="pixel" style="font-size:13px;">MY STATS</div>
-                </div>
+                <p class="font-pixel text-[7px] text-dim mb-1">WEEK 34</p>
+                <p class="font-pixel text-[13px] mb-5">MY STATS</p>
 
-                <!-- Score overview -->
-                <div class="card glow-green pixel-border" style="margin-bottom:14px; background: linear-gradient(135deg, #0f1923, #0f1f15); border-color: rgba(10,255,157,0.2); text-align:center; padding:24px 16px;">
-                    <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:8px;">TOTAL SCORE</div>
-                    <div class="pixel" style="font-size:32px; color:var(--green); letter-spacing:2px;">9,810</div>
-                    <div style="display:flex; justify-content:center; gap:6px; margin-top:8px;">
-                        <span class="tag" style="background: rgba(10,255,157,0.15); color:var(--green);">RANK #1</span>
-                        <span class="tag" style="background: rgba(10,255,157,0.15); color:var(--green);">▲ +340 TODAY</span>
+                <!-- Score hero -->
+                <div class="bg-gradient-to-br from-card to-[#0f1f15] border border-neon/20 rounded-2xl shadow-neon text-center px-4 py-6 mb-4">
+                    <p class="font-pixel text-[7px] text-dim mb-2">TOTAL SCORE</p>
+                    <p class="font-pixel text-[30px] text-neon tracking-widest">9,810</p>
+                    <div class="flex justify-center gap-2 mt-2 flex-wrap">
+                        <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-1 rounded">RANK #1</span>
+                        <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-1 rounded">▲ +340 TODAY</span>
                     </div>
-                    <!-- XP bar -->
-                    <div style="margin-top:16px;">
-                        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;">
-                            <span>LVL 12</span><span>780 / 1000 XP</span>
+                    <div class="mt-4">
+                        <div class="flex justify-between text-[10px] text-dim mb-1"><span>LVL 12</span><span>780 / 1000 XP</span></div>
+                        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full w-[78%] bg-gradient-to-r from-violet to-sky rounded-full"></div>
                         </div>
-                        <div class="xp-bar"><div class="xp-fill" style="width:78%;"></div></div>
                     </div>
                 </div>
 
-                <!-- Tab switcher -->
-                <div class="tab-group" style="margin-bottom:14px;">
-                    <button class="tab-btn active" onclick="switchStatTab('week',this)">WEEK</button>
-                    <button class="tab-btn" onclick="switchStatTab('today',this)">TODAY</button>
+                <!-- Tab switch -->
+                <div class="flex bg-card2 rounded-xl p-1 mb-4">
+                    <button onclick="switchTab(this)" class="flex-1 py-2 rounded-lg font-pixel text-[8px] bg-accent text-white border-none cursor-pointer">WEEK</button>
+                    <button onclick="switchTab(this)" class="flex-1 py-2 rounded-lg font-pixel text-[8px] text-dim bg-transparent border-none cursor-pointer">TODAY</button>
                 </div>
 
-                <!-- Stats breakdown -->
-                <div style="display:flex; flex-direction:column; gap:10px;" id="week-stats">
+                <!-- Breakdown cards -->
+                <div class="flex flex-col gap-3">
 
                     <!-- Sleep -->
-                    <div class="card pixel-border">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="font-size:18px;">😴</span>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">😴</span>
                                 <div>
-                                    <div class="pixel" style="font-size:7px; color:var(--muted);">SLEEP</div>
-                                    <div style="font-size:13px; font-weight:600; color:var(--blue);">52 hrs</div>
+                                    <p class="font-pixel text-[7px] text-dim">SLEEP</p>
+                                    <p class="text-[13px] font-semibold text-sky">52 hrs</p>
                                 </div>
                             </div>
-                            <div style="text-align:right;">
-                                <div class="pixel" style="font-size:8px; color:var(--blue);">+1,300 pts</div>
-                                <div style="font-size:10px; color:var(--muted);">7.4hr avg/night</div>
+                            <div class="text-right">
+                                <p class="font-pixel text-[8px] text-sky">+1,300 pts</p>
+                                <p class="text-[10px] text-dim">7.4hr avg/night</p>
                             </div>
                         </div>
-                        <!-- Mini bar chart (7 days) -->
-                        <div style="display:flex; align-items:flex-end; gap:4px; height:32px;">
-                            <div style="flex:1; background:rgba(76,201,240,0.3); height:60%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.5); height:90%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.3); height:55%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.8); height:100%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.4); height:70%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.6); height:85%; border-radius:2px 2px 0 0;"></div>
-                            <div style="flex:1; background:rgba(76,201,240,0.9); height:95%; border-radius:2px 2px 0 0;"></div>
+                        <div class="flex items-end gap-1 h-8">
+                            <div class="flex-1 bg-sky/30 rounded-t" style="height:60%"></div>
+                            <div class="flex-1 bg-sky/50 rounded-t" style="height:90%"></div>
+                            <div class="flex-1 bg-sky/30 rounded-t" style="height:55%"></div>
+                            <div class="flex-1 bg-sky/80 rounded-t" style="height:100%"></div>
+                            <div class="flex-1 bg-sky/40 rounded-t" style="height:70%"></div>
+                            <div class="flex-1 bg-sky/60 rounded-t" style="height:85%"></div>
+                            <div class="flex-1 bg-sky/90 rounded-t" style="height:95%"></div>
                         </div>
-                        <div style="display:flex; gap:4px; margin-top:2px;">
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">M</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">T</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">W</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">T</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">F</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">S</div>
-                            <div style="flex:1; text-align:center; font-size:8px; color:var(--muted);">S</div>
+                        <div class="flex gap-1 mt-1">
+                            <div class="flex-1 text-center text-[8px] text-dim">M</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">T</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">W</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">T</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">F</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">S</div>
+                            <div class="flex-1 text-center text-[8px] text-dim">S</div>
                         </div>
                     </div>
 
                     <!-- Steps -->
-                    <div class="card pixel-border">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="font-size:18px;">👟</span>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">👟</span>
                                 <div>
-                                    <div class="pixel" style="font-size:7px; color:var(--muted);">STEPS</div>
-                                    <div style="font-size:13px; font-weight:600; color:var(--green);">62,100</div>
+                                    <p class="font-pixel text-[7px] text-dim">STEPS</p>
+                                    <p class="text-[13px] font-semibold text-neon">62,100</p>
                                 </div>
                             </div>
-                            <div style="text-align:right;">
-                                <div class="pixel" style="font-size:8px; color:var(--green);">+621 pts</div>
-                                <div style="font-size:10px; color:var(--muted);">8,871/day avg</div>
+                            <div class="text-right">
+                                <p class="font-pixel text-[8px] text-neon">+621 pts</p>
+                                <p class="text-[10px] text-dim">8,871/day avg</p>
                             </div>
                         </div>
-                        <div class="prog-track">
-                            <div class="prog-fill" style="width:87%; background: linear-gradient(90deg, var(--green), #34d399);"></div>
+                        <div class="h-2.5 bg-white/5 overflow-visible relative">
+                            <div class="prog-fill bg-gradient-to-r from-neon to-emerald-400" style="width:87%"></div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:4px;">
-                            <span>0</span><span>GOAL: 70,000</span>
-                        </div>
+                        <div class="flex justify-between text-[9px] text-dim mt-1"><span>0</span><span>GOAL: 70,000</span></div>
                     </div>
 
                     <!-- Exercise -->
-                    <div class="card pixel-border">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="font-size:18px;">🏋️</span>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🏋️</span>
                                 <div>
-                                    <div class="pixel" style="font-size:7px; color:var(--muted);">EXERCISE</div>
-                                    <div style="font-size:13px; font-weight:600; color:var(--yellow);">7.5 hrs</div>
+                                    <p class="font-pixel text-[7px] text-dim">EXERCISE</p>
+                                    <p class="text-[13px] font-semibold text-gold">7.5 hrs</p>
                                 </div>
                             </div>
-                            <div style="text-align:right;">
-                                <div class="pixel" style="font-size:8px; color:var(--yellow);">+375 pts</div>
-                                <div style="font-size:10px; color:var(--muted);">4 sessions</div>
+                            <div class="text-right">
+                                <p class="font-pixel text-[8px] text-gold">+375 pts</p>
+                                <p class="text-[10px] text-dim">4 sessions</p>
                             </div>
                         </div>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🏃 RUN</span>
-                            <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🏋️ GYM</span>
-                            <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🚴 CYCLE</span>
-                            <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🧘 YOGA</span>
+                        <div class="flex gap-1.5 flex-wrap">
+                            <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🏃 RUN</span>
+                            <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🏋️ GYM</span>
+                            <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🚴 CYCLE</span>
+                            <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🧘 YOGA</span>
                         </div>
                     </div>
 
                     <!-- Screen time -->
-                    <div class="card pixel-border">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="font-size:18px;">📱</span>
+                    <div class="bg-card border border-border rounded-2xl shadow-pixel p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">📱</span>
                                 <div>
-                                    <div class="pixel" style="font-size:7px; color:var(--muted);">SCREEN TIME</div>
-                                    <div style="font-size:13px; font-weight:600; color:var(--accent);">1.8 hrs/day</div>
+                                    <p class="font-pixel text-[7px] text-dim">SCREEN TIME</p>
+                                    <p class="text-[13px] font-semibold text-accent">1.8 hrs/day</p>
                                 </div>
                             </div>
-                            <div style="text-align:right;">
-                                <div class="pixel" style="font-size:8px; color:var(--green);">NO PENALTY</div>
-                                <div style="font-size:10px; color:var(--muted);">Under 2hr ✓</div>
+                            <div class="text-right">
+                                <p class="font-pixel text-[8px] text-neon">NO PENALTY</p>
+                                <p class="text-[10px] text-dim">Under 2hr ✓</p>
                             </div>
                         </div>
-                        <div class="prog-track">
-                            <div class="prog-fill" style="width:90%; background: linear-gradient(90deg, var(--green), var(--yellow), var(--accent));"></div>
+                        <div class="h-2.5 bg-white/5 overflow-visible relative">
+                            <div class="prog-fill bg-gradient-to-r from-neon via-gold to-accent" style="width:90%"></div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:4px;">
-                            <span>0hr</span><span style="color:var(--yellow);">2hr LIMIT</span><span>5hr</span>
-                        </div>
+                        <div class="flex justify-between text-[9px] text-dim mt-1"><span>0hr</span><span class="text-gold">2hr LIMIT</span><span>5hr</span></div>
                     </div>
-                </div>
 
+                </div>
             </div>
         </div>
 
-        <!-- ══════════ MISSIONS PAGE ══════════ -->
+        <!-- ═══════════════════════════════
+             PAGE: MISSIONS
+        ════════════════════════════════ -->
         <div class="page" id="page-missions">
-            <div style="padding: 16px;">
+            <div class="p-4">
 
-                <div style="margin-bottom:20px;">
-                    <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:4px;">WEEK 34 · MON–SUN</div>
-                    <div class="pixel" style="font-size:13px;">MISSIONS</div>
+                <p class="font-pixel text-[7px] text-dim mb-1">WEEK 34 · MON–SUN</p>
+                <p class="font-pixel text-[13px] mb-5">MISSIONS</p>
+
+                <div class="flex justify-between items-center mb-3">
+                    <p class="font-pixel text-[8px] text-neon">⚡ YOUR MISSIONS</p>
+                    <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-1 rounded">2/3 DONE</span>
                 </div>
 
-                <!-- Your missions -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div class="pixel" style="font-size:8px; color:var(--green);">⚡ YOUR MISSIONS</div>
-                    <span class="tag" style="background:rgba(10,255,157,0.15); color:var(--green);">2/3 DONE</span>
-                </div>
+                <div class="flex flex-col gap-3 mb-6">
 
-                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
-                    <!-- Mission 1 - done -->
-                    <div class="mission-card" style="border-left-color: var(--green); opacity:0.7;">
-                        <div style="display:flex; gap:10px; align-items:flex-start;">
-                            <div class="px-check done" onclick="toggleCheck(this)">✓</div>
-                            <div style="flex:1;">
-                                <div class="pixel" style="font-size:7px; color:var(--green); margin-bottom:4px;">MISSION 01 · COMPLETED</div>
-                                <div style="font-size:13px; font-weight:600; margin-bottom:4px;">📸 Memory Photo</div>
-                                <div style="font-size:11px; color:var(--muted); line-height:1.4;">Take a photo of something that reminds you of Alex this week.</div>
-                                <div style="margin-top:8px; background: rgba(255,255,255,0.05); border-radius:8px; padding:6px; display:flex; align-items:center; gap:6px;">
-                                    <span style="font-size:16px;">🌅</span>
-                                    <span style="font-size:10px; color:var(--muted);">Submitted · Tue Aug 6</span>
+                    <!-- Done missions -->
+                    <div class="border-l-4 border-neon bg-card2 rounded-r-xl p-3.5 opacity-70">
+                        <div class="flex gap-3 items-start">
+                            <div class="w-[18px] h-[18px] border-2 border-neon bg-neon/15 rounded flex items-center justify-center text-neon text-xs shrink-0 mt-0.5 cursor-pointer" onclick="toggleCheck(this)">✓</div>
+                            <div class="flex-1">
+                                <p class="font-pixel text-[7px] text-neon mb-1">MISSION 01 · COMPLETED</p>
+                                <p class="text-[13px] font-semibold mb-1">📸 Memory Photo</p>
+                                <p class="text-[11px] text-dim leading-relaxed">Take a photo of something that reminds you of Alex this week.</p>
+                                <div class="mt-2 bg-white/5 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                                    <span>🌅</span><span class="text-[10px] text-dim">Submitted · Tue Aug 6</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Mission 2 - done -->
-                    <div class="mission-card" style="border-left-color: var(--green); opacity:0.7;">
-                        <div style="display:flex; gap:10px; align-items:flex-start;">
-                            <div class="px-check done" onclick="toggleCheck(this)">✓</div>
-                            <div style="flex:1;">
-                                <div class="pixel" style="font-size:7px; color:var(--green); margin-bottom:4px;">MISSION 02 · COMPLETED</div>
-                                <div style="font-size:13px; font-weight:600; margin-bottom:4px;">🍜 Meal Photo</div>
-                                <div style="font-size:11px; color:var(--muted); line-height:1.4;">Send a photo of a healthy meal you cooked this week.</div>
-                                <div style="margin-top:8px; background: rgba(255,255,255,0.05); border-radius:8px; padding:6px; display:flex; align-items:center; gap:6px;">
-                                    <span style="font-size:16px;">🥗</span>
-                                    <span style="font-size:10px; color:var(--muted);">Submitted · Wed Aug 7</span>
+                    <div class="border-l-4 border-neon bg-card2 rounded-r-xl p-3.5 opacity-70">
+                        <div class="flex gap-3 items-start">
+                            <div class="w-[18px] h-[18px] border-2 border-neon bg-neon/15 rounded flex items-center justify-center text-neon text-xs shrink-0 mt-0.5 cursor-pointer" onclick="toggleCheck(this)">✓</div>
+                            <div class="flex-1">
+                                <p class="font-pixel text-[7px] text-neon mb-1">MISSION 02 · COMPLETED</p>
+                                <p class="text-[13px] font-semibold mb-1">🍜 Meal Photo</p>
+                                <p class="text-[11px] text-dim leading-relaxed">Send a photo of a healthy meal you cooked this week.</p>
+                                <div class="mt-2 bg-white/5 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                                    <span>🥗</span><span class="text-[10px] text-dim">Submitted · Wed Aug 7</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Mission 3 - pending -->
-                    <div class="mission-card" style="border-left-color: var(--accent);">
-                        <div style="display:flex; gap:10px; align-items:flex-start;">
-                            <div class="px-check" onclick="toggleCheck(this)"></div>
-                            <div style="flex:1;">
-                                <div class="pixel" style="font-size:7px; color:var(--accent); margin-bottom:4px;">MISSION 03 · PENDING</div>
-                                <div style="font-size:13px; font-weight:600; margin-bottom:4px;">🌄 Golden Hour</div>
-                                <div style="font-size:11px; color:var(--muted); line-height:1.4;">Capture a sunset or sunrise photo this week. Bonus: go outside to watch it.</div>
-                                <button style="margin-top:10px; background: var(--accent); color: white; border: none; padding: 8px 14px; border-radius:8px; font-size:10px; font-family:'Press Start 2P',monospace; cursor:pointer; display:flex; align-items:center; gap:6px;" onclick="alert('Upload feature coming soon!')">
+                    <!-- Pending mission -->
+                    <div class="border-l-4 border-accent bg-card2 rounded-r-xl p-3.5">
+                        <div class="flex gap-3 items-start">
+                            <div class="w-[18px] h-[18px] border-2 border-dim rounded shrink-0 mt-0.5 cursor-pointer" onclick="toggleCheck(this)"></div>
+                            <div class="flex-1">
+                                <p class="font-pixel text-[7px] text-accent mb-1">MISSION 03 · PENDING</p>
+                                <p class="text-[13px] font-semibold mb-1">🌄 Golden Hour</p>
+                                <p class="text-[11px] text-dim leading-relaxed">Capture a sunset or sunrise photo this week. Bonus: go outside to watch it.</p>
+                                <button class="mt-3 bg-accent text-white font-pixel text-[8px] px-3 py-2 rounded-lg flex items-center gap-1.5 border-none cursor-pointer" onclick="alert('Upload feature coming soon!')">
                                     📎 SUBMIT PHOTO
                                 </button>
                             </div>
                         </div>
                     </div>
+
                 </div>
 
-                <div class="pixel-divider"></div>
+                <div class="pixel-divider mb-5"></div>
 
-                <!-- Squad missions -->
-                <div style="margin-bottom:12px;">
-                    <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:10px;">👥 SQUAD PROGRESS</div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div class="card" style="padding:12px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-size:12px; font-weight:600;">📸 Memory Photo</div>
-                                <span class="tag" style="background:rgba(10,255,157,0.15); color:var(--green);">4/5</span>
-                            </div>
-                            <div style="display:flex; gap:4px;">
-                                <span style="font-size:14px;" title="Jordan">👾</span>
-                                <span style="font-size:14px;" title="Alex">🐸</span>
-                                <span style="font-size:14px;" title="Sam">🦊</span>
-                                <span style="font-size:14px;" title="Maya">🐼</span>
-                                <span style="font-size:14px; opacity:0.3;" title="Chris - pending">🐙</span>
-                            </div>
+                <p class="font-pixel text-[8px] text-dim mb-3">👥 SQUAD PROGRESS</p>
+                <div class="flex flex-col gap-2">
+
+                    <div class="bg-card border border-border rounded-xl p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[12px] font-semibold">📸 Memory Photo</p>
+                            <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-0.5 rounded">4/5</span>
                         </div>
-
-                        <div class="card" style="padding:12px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-size:12px; font-weight:600;">🍜 Meal Photo</div>
-                                <span class="tag" style="background:rgba(10,255,157,0.15); color:var(--green);">5/5</span>
-                            </div>
-                            <div style="display:flex; gap:4px;">
-                                <span style="font-size:14px;">👾</span><span style="font-size:14px;">🐸</span><span style="font-size:14px;">🦊</span><span style="font-size:14px;">🐼</span><span style="font-size:14px;">🐙</span>
-                            </div>
-                        </div>
-
-                        <div class="card" style="padding:12px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <div style="font-size:12px; font-weight:600;">🌄 Golden Hour</div>
-                                <span class="tag" style="background:rgba(233,69,96,0.15); color:var(--accent);">1/5</span>
-                            </div>
-                            <div style="display:flex; gap:4px;">
-                                <span style="font-size:14px;">👾</span>
-                                <span style="font-size:14px; opacity:0.3;">🐸</span>
-                                <span style="font-size:14px; opacity:0.3;">🦊</span>
-                                <span style="font-size:14px; opacity:0.3;">🐼</span>
-                                <span style="font-size:14px; opacity:0.3;">🐙</span>
-                            </div>
+                        <div class="flex gap-1">
+                            <span class="text-sm">👾</span><span class="text-sm">🐸</span><span class="text-sm">🦊</span><span class="text-sm">🐼</span><span class="text-sm opacity-30">🐙</span>
                         </div>
                     </div>
-                </div>
 
+                    <div class="bg-card border border-border rounded-xl p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[12px] font-semibold">🍜 Meal Photo</p>
+                            <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-0.5 rounded">5/5</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <span class="text-sm">👾</span><span class="text-sm">🐸</span><span class="text-sm">🦊</span><span class="text-sm">🐼</span><span class="text-sm">🐙</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border rounded-xl p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[12px] font-semibold">🌄 Golden Hour</p>
+                            <span class="bg-accent/15 text-accent font-pixel text-[7px] px-2 py-0.5 rounded">1/5</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <span class="text-sm">👾</span><span class="text-sm opacity-30">🐸</span><span class="text-sm opacity-30">🦊</span><span class="text-sm opacity-30">🐼</span><span class="text-sm opacity-30">🐙</span>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
 
-        <!-- ══════════ SUNDAY RECAP PAGE ══════════ -->
+        <!-- ═══════════════════════════════
+             PAGE: SUNDAY RECAP
+        ════════════════════════════════ -->
         <div class="page" id="page-recap">
-            <div style="padding: 16px;">
+            <div class="p-4">
 
-                <div style="margin-bottom:20px;">
-                    <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:4px;">WEEK 33 RESULTS</div>
-                    <div class="pixel" style="font-size:12px;">SUNDAY RECAP</div>
-                </div>
+                <p class="font-pixel text-[7px] text-dim mb-1">WEEK 33 RESULTS</p>
+                <p class="font-pixel text-[12px] mb-5">SUNDAY RECAP</p>
 
-                <!-- Winner banner -->
-                <div class="card pixel-border" style="margin-bottom:14px; background: linear-gradient(135deg, #1a0a00, #2a1500); border-color: rgba(255,217,61,0.3); text-align:center; padding:24px 16px; position:relative; overflow:hidden;">
-                    <div style="position:absolute; top:10px; left:10px; font-size:20px; opacity:0.2;">⭐</div>
-                    <div style="position:absolute; top:10px; right:10px; font-size:20px; opacity:0.2;">⭐</div>
-                    <div style="position:absolute; bottom:10px; left:20px; font-size:16px; opacity:0.15;">✨</div>
-                    <div style="position:absolute; bottom:10px; right:20px; font-size:16px; opacity:0.15;">✨</div>
-                    <div class="float" style="font-size:36px; margin-bottom:6px;">👑</div>
-                    <div class="pixel" style="font-size:8px; color:var(--yellow); margin-bottom:4px;">WEEK 33 CHAMPION</div>
-                    <div style="font-size:20px; font-weight:700; margin-bottom:4px;">Jordan 👾</div>
-                    <div class="pixel" style="font-size:10px; color:var(--yellow);">9,200 PTS</div>
-                    <div style="margin-top:10px; display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
-                        <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🏆 W33 WINNER</span>
-                        <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">🔥 3-WEEK STREAK</span>
+                <!-- Champion banner -->
+                <div class="bg-gradient-to-br from-[#1a0a00] to-[#2a1500] border border-gold/30 rounded-2xl shadow-pixel text-center px-4 py-6 mb-4 relative overflow-hidden">
+                    <span class="absolute top-3 left-3 text-xl opacity-20">⭐</span>
+                    <span class="absolute top-3 right-3 text-xl opacity-20">⭐</span>
+                    <div class="text-[36px] mb-2 animate-float">👑</div>
+                    <p class="font-pixel text-[7px] text-gold mb-1">WEEK 33 CHAMPION</p>
+                    <p class="text-[20px] font-bold mb-1">Jordan 👾</p>
+                    <p class="font-pixel text-[10px] text-gold">9,200 PTS</p>
+                    <div class="flex justify-center gap-2 mt-3 flex-wrap">
+                        <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🏆 W33 WINNER</span>
+                        <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">🔥 3-WEEK STREAK</span>
                     </div>
                 </div>
 
-                <!-- Final standings -->
-                <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:10px;">FINAL STANDINGS</div>
-                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-                    <div class="card" style="display:flex; align-items:center; gap:10px; padding:10px 14px;">
-                        <span style="font-size:16px;">🥇</span>
-                        <span style="font-size:20px;">👾</span>
-                        <div style="flex:1; font-weight:600;">Jordan</div>
-                        <div class="pixel" style="font-size:9px; color:var(--yellow);">9,200</div>
+                <p class="font-pixel text-[8px] text-dim mb-3">FINAL STANDINGS</p>
+                <div class="flex flex-col gap-2 mb-5">
+                    <div class="bg-card border border-border rounded-xl flex items-center gap-2.5 px-3.5 py-2.5">
+                        <span class="text-base">🥇</span><span class="text-xl">👾</span>
+                        <span class="flex-1 font-semibold text-sm">Jordan</span>
+                        <span class="font-pixel text-[9px] text-gold">9,200</span>
                     </div>
-                    <div class="card" style="display:flex; align-items:center; gap:10px; padding:10px 14px;">
-                        <span style="font-size:16px;">🥈</span>
-                        <span style="font-size:20px;">🦊</span>
-                        <div style="flex:1; font-weight:600;">Sam</div>
-                        <div class="pixel" style="font-size:9px; color:var(--muted);">8,600</div>
+                    <div class="bg-card border border-border rounded-xl flex items-center gap-2.5 px-3.5 py-2.5">
+                        <span class="text-base">🥈</span><span class="text-xl">🦊</span>
+                        <span class="flex-1 font-semibold text-sm">Sam</span>
+                        <span class="font-pixel text-[9px] text-dim">8,600</span>
                     </div>
-                    <div class="card" style="display:flex; align-items:center; gap:10px; padding:10px 14px;">
-                        <span style="font-size:16px;">🥉</span>
-                        <span style="font-size:20px;">🐸</span>
-                        <div style="flex:1; font-weight:600;">Alex</div>
-                        <div class="pixel" style="font-size:9px; color:var(--muted);">7,900</div>
+                    <div class="bg-card border border-border rounded-xl flex items-center gap-2.5 px-3.5 py-2.5">
+                        <span class="text-base">🥉</span><span class="text-xl">🐸</span>
+                        <span class="flex-1 font-semibold text-sm">Alex</span>
+                        <span class="font-pixel text-[9px] text-dim">7,900</span>
                     </div>
-                    <div class="card" style="display:flex; align-items:center; gap:10px; padding:10px 14px; opacity:0.7;">
-                        <span style="font-size:16px;">4️⃣</span>
-                        <span style="font-size:20px;">🐼</span>
-                        <div style="flex:1; font-weight:600;">Maya</div>
-                        <div class="pixel" style="font-size:9px; color:var(--muted);">6,100</div>
+                    <div class="bg-card border border-border rounded-xl flex items-center gap-2.5 px-3.5 py-2.5 opacity-70">
+                        <span class="text-base">4️⃣</span><span class="text-xl">🐼</span>
+                        <span class="flex-1 font-semibold text-sm">Maya</span>
+                        <span class="font-pixel text-[9px] text-dim">6,100</span>
                     </div>
-                    <div class="card" style="display:flex; align-items:center; gap:10px; padding:10px 14px; opacity:0.6;">
-                        <span style="font-size:16px;">5️⃣</span>
-                        <span style="font-size:20px;">🐙</span>
-                        <div style="flex:1; font-weight:600;">Chris</div>
-                        <div class="pixel" style="font-size:9px; color:var(--muted);">4,800</div>
+                    <div class="bg-card border border-border rounded-xl flex items-center gap-2.5 px-3.5 py-2.5 opacity-60">
+                        <span class="text-base">5️⃣</span><span class="text-xl">🐙</span>
+                        <span class="flex-1 font-semibold text-sm">Chris</span>
+                        <span class="font-pixel text-[9px] text-dim">4,800</span>
                     </div>
                 </div>
 
-                <!-- Mission photos -->
-                <div class="pixel-divider"></div>
-                <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:10px;">📸 MISSION SUBMISSIONS</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
-                    <div style="background: rgba(255,255,255,0.04); border-radius:12px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border: 1px solid var(--border); cursor:pointer;" onclick="alert('Photo gallery coming soon!')">
-                        <div style="font-size:28px; margin-bottom:6px;">🌅</div>
-                        <div style="font-size:9px; color:var(--muted);">Jordan's memory</div>
+                <div class="pixel-divider mb-5"></div>
+
+                <p class="font-pixel text-[8px] text-dim mb-3">📸 MISSION SUBMISSIONS</p>
+                <div class="grid grid-cols-2 gap-2 mb-5">
+                    <div class="bg-white/[0.03] border border-border rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors" onclick="alert('Photo gallery coming soon!')">
+                        <span class="text-3xl mb-1.5">🌅</span><span class="text-[9px] text-dim">Jordan's memory</span>
                     </div>
-                    <div style="background: rgba(255,255,255,0.04); border-radius:12px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border: 1px solid var(--border); cursor:pointer;" onclick="alert('Photo gallery coming soon!')">
-                        <div style="font-size:28px; margin-bottom:6px;">🥗</div>
-                        <div style="font-size:9px; color:var(--muted);">Sam's meal</div>
+                    <div class="bg-white/[0.03] border border-border rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors" onclick="alert('Photo gallery coming soon!')">
+                        <span class="text-3xl mb-1.5">🥗</span><span class="text-[9px] text-dim">Sam's meal</span>
                     </div>
-                    <div style="background: rgba(255,255,255,0.04); border-radius:12px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border: 1px solid var(--border); cursor:pointer;" onclick="alert('Photo gallery coming soon!')">
-                        <div style="font-size:28px; margin-bottom:6px;">🌄</div>
-                        <div style="font-size:9px; color:var(--muted);">Alex's golden hr</div>
+                    <div class="bg-white/[0.03] border border-border rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors" onclick="alert('Photo gallery coming soon!')">
+                        <span class="text-3xl mb-1.5">🌄</span><span class="text-[9px] text-dim">Alex's golden hr</span>
                     </div>
-                    <div style="background: rgba(255,255,255,0.04); border-radius:12px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border: 1px solid var(--border); cursor:pointer;" onclick="alert('Photo gallery coming soon!')">
-                        <div style="font-size:28px; margin-bottom:6px;">📷</div>
-                        <div style="font-size:9px; color:var(--muted);">+6 more photos</div>
+                    <div class="bg-white/[0.03] border border-border rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors" onclick="alert('Photo gallery coming soon!')">
+                        <span class="text-3xl mb-1.5">📷</span><span class="text-[9px] text-dim">+6 more photos</span>
                     </div>
                 </div>
 
-                <!-- Next week missions preview -->
-                <div class="card" style="background: linear-gradient(135deg, var(--card), #1a1a2e); border-color: rgba(168,85,247,0.3); padding:16px;">
-                    <div class="pixel" style="font-size:7px; color:var(--purple); margin-bottom:10px;">⚡ NEXT WEEK MISSIONS (PREVIEW)</div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;"><span>🤸</span><span>Post your workout routine</span></div>
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;"><span>📖</span><span>Share a book or podcast rec</span></div>
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;"><span>🌿</span><span>Go outside for 30+ mins. Prove it.</span></div>
+                <!-- Next week preview -->
+                <div class="bg-gradient-to-br from-card to-card2 border border-violet/30 rounded-2xl p-4">
+                    <p class="font-pixel text-[7px] text-violet mb-3">⚡ NEXT WEEK MISSIONS</p>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2 items-center text-[12px]"><span>🤸</span><span>Post your workout routine</span></div>
+                        <div class="flex gap-2 items-center text-[12px]"><span>📖</span><span>Share a book or podcast rec</span></div>
+                        <div class="flex gap-2 items-center text-[12px]"><span>🌿</span><span>Go outside 30+ mins. Prove it.</span></div>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <!-- ══════════ PROFILE PAGE ══════════ -->
+        <!-- ═══════════════════════════════
+             PAGE: PROFILE
+        ════════════════════════════════ -->
         <div class="page" id="page-profile">
-            <div style="padding: 16px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-                    <button onclick="navigate('home')" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px;">←</button>
-                    <div class="pixel" style="font-size:12px;" id="profile-name">JORDAN</div>
+            <div class="p-4">
+
+                <div class="flex items-center gap-2.5 mb-5">
+                    <button onclick="navigate('home')" class="bg-transparent border-none text-dim cursor-pointer text-xl leading-none">←</button>
+                    <p class="font-pixel text-[12px]" id="profile-name">JORDAN</p>
                 </div>
 
-                <div class="card pixel-border" style="text-align:center; margin-bottom:14px; padding:24px; background: linear-gradient(135deg, #1a1a2e, #0f1923);">
-                    <div style="font-size:48px; margin-bottom:8px;">👾</div>
-                    <div style="font-size:18px; font-weight:700; margin-bottom:4px;" id="profile-full-name">Jordan</div>
-                    <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
-                        <span class="tag" style="background:rgba(10,255,157,0.15); color:var(--green);">#1 THIS WEEK</span>
-                        <span class="tag" style="background:rgba(255,217,61,0.15); color:var(--yellow);">LVL 12</span>
-                        <span class="tag" style="background:rgba(233,69,96,0.15); color:var(--accent);">🔥 3W STREAK</span>
-                    </div>
-                </div>
-
-                <!-- Stats grid -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
-                    <div class="card" style="text-align:center; padding:14px;">
-                        <div class="pixel" style="font-size:7px; color:var(--muted); margin-bottom:4px;">SLEEP</div>
-                        <div style="font-size:18px; font-weight:700; color:var(--blue);">7.4h</div>
-                        <div style="font-size:10px; color:var(--muted);">avg/night</div>
-                    </div>
-                    <div class="card" style="text-align:center; padding:14px;">
-                        <div class="pixel" style="font-size:7px; color:var(--muted); margin-bottom:4px;">STEPS</div>
-                        <div style="font-size:18px; font-weight:700; color:var(--green);">62K</div>
-                        <div style="font-size:10px; color:var(--muted);">this week</div>
-                    </div>
-                    <div class="card" style="text-align:center; padding:14px;">
-                        <div class="pixel" style="font-size:7px; color:var(--muted); margin-bottom:4px;">EXERCISE</div>
-                        <div style="font-size:18px; font-weight:700; color:var(--yellow);">7.5h</div>
-                        <div style="font-size:10px; color:var(--muted);">this week</div>
-                    </div>
-                    <div class="card" style="text-align:center; padding:14px;">
-                        <div class="pixel" style="font-size:7px; color:var(--muted); margin-bottom:4px;">SCREEN</div>
-                        <div style="font-size:18px; font-weight:700; color:var(--green);">1.8h</div>
-                        <div style="font-size:10px; color:var(--muted);">avg/day</div>
+                <div class="bg-gradient-to-br from-card to-[#0f1923] border border-border rounded-2xl shadow-pixel text-center px-4 py-6 mb-4">
+                    <div class="text-[48px] mb-2" id="profile-avatar">👾</div>
+                    <p class="text-[18px] font-bold mb-1" id="profile-full-name">Jordan</p>
+                    <div class="flex justify-center gap-1.5 flex-wrap mt-1">
+                        <span class="bg-neon/15 text-neon font-pixel text-[7px] px-2 py-1 rounded">#1 THIS WEEK</span>
+                        <span class="bg-gold/15 text-gold font-pixel text-[7px] px-2 py-1 rounded">LVL 12</span>
+                        <span class="bg-accent/15 text-accent font-pixel text-[7px] px-2 py-1 rounded">🔥 3W STREAK</span>
                     </div>
                 </div>
 
-                <!-- Achievement badges -->
-                <div class="pixel" style="font-size:8px; color:var(--muted); margin-bottom:10px;">🏅 ACHIEVEMENTS</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                    <div style="text-align:center; width:56px;">
-                        <div style="font-size:24px;">🏆</div>
-                        <div style="font-size:7px; color:var(--yellow); margin-top:2px;">CHAMP</div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="bg-card border border-border rounded-xl text-center p-3.5">
+                        <p class="font-pixel text-[7px] text-dim mb-1">SLEEP</p>
+                        <p class="text-[18px] font-bold text-sky">7.4h</p>
+                        <p class="text-[10px] text-dim">avg/night</p>
                     </div>
-                    <div style="text-align:center; width:56px;">
-                        <div style="font-size:24px;">🔥</div>
-                        <div style="font-size:7px; color:var(--accent); margin-top:2px;">3-STREAK</div>
+                    <div class="bg-card border border-border rounded-xl text-center p-3.5">
+                        <p class="font-pixel text-[7px] text-dim mb-1">STEPS</p>
+                        <p class="text-[18px] font-bold text-neon">62K</p>
+                        <p class="text-[10px] text-dim">this week</p>
                     </div>
-                    <div style="text-align:center; width:56px;">
-                        <div style="font-size:24px;">👟</div>
-                        <div style="font-size:7px; color:var(--green); margin-top:2px;">STEP KING</div>
+                    <div class="bg-card border border-border rounded-xl text-center p-3.5">
+                        <p class="font-pixel text-[7px] text-dim mb-1">EXERCISE</p>
+                        <p class="text-[18px] font-bold text-gold">7.5h</p>
+                        <p class="text-[10px] text-dim">this week</p>
                     </div>
-                    <div style="text-align:center; width:56px;">
-                        <div style="font-size:24px;">🌙</div>
-                        <div style="font-size:7px; color:var(--blue); margin-top:2px;">SLEEP PRO</div>
+                    <div class="bg-card border border-border rounded-xl text-center p-3.5">
+                        <p class="font-pixel text-[7px] text-dim mb-1">SCREEN</p>
+                        <p class="text-[18px] font-bold text-neon">1.8h</p>
+                        <p class="text-[10px] text-dim">avg/day</p>
                     </div>
-                    <div style="text-align:center; width:56px; opacity:0.3;">
-                        <div style="font-size:24px;">🤝</div>
-                        <div style="font-size:7px; color:var(--muted); margin-top:2px;">LOCKED</div>
-                    </div>
+                </div>
+
+                <p class="font-pixel text-[8px] text-dim mb-3">🏅 ACHIEVEMENTS</p>
+                <div class="flex gap-3 flex-wrap">
+                    <div class="text-center w-14"><div class="text-2xl">🏆</div><p class="font-pixel text-[6px] text-gold mt-1">CHAMP</p></div>
+                    <div class="text-center w-14"><div class="text-2xl">🔥</div><p class="font-pixel text-[6px] text-accent mt-1">3-STREAK</p></div>
+                    <div class="text-center w-14"><div class="text-2xl">👟</div><p class="font-pixel text-[6px] text-neon mt-1">STEP KING</p></div>
+                    <div class="text-center w-14"><div class="text-2xl">🌙</div><p class="font-pixel text-[6px] text-sky mt-1">SLEEP PRO</p></div>
+                    <div class="text-center w-14 opacity-30"><div class="text-2xl">🤝</div><p class="font-pixel text-[6px] text-dim mt-1">LOCKED</p></div>
                 </div>
 
             </div>
@@ -849,65 +625,82 @@
 
     </div><!-- /screen -->
 
-    <!-- Bottom Nav -->
-    <div class="bottom-nav">
-        <button class="nav-btn active" id="nav-home" onclick="navigate('home')">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <!-- ░░░ BOTTOM NAV ░░░ -->
+    <div class="absolute bottom-0 left-0 right-0 bg-bg/95 border-t-2 border-border flex pt-3 pb-5 backdrop-blur">
+
+        <button id="nav-home" onclick="navigate('home')"
+                class="flex-1 flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer font-pixel text-[7px] text-accent transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             HOME
         </button>
-        <button class="nav-btn" id="nav-stats" onclick="navigate('stats')">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+
+        <button id="nav-stats" onclick="navigate('stats')"
+                class="flex-1 flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer font-pixel text-[7px] text-dim transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
             STATS
         </button>
-        <button class="nav-btn" id="nav-missions" onclick="navigate('missions')">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+
+        <button id="nav-missions" onclick="navigate('missions')"
+                class="flex-1 flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer font-pixel text-[7px] text-dim transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
             MISSIONS
         </button>
-        <button class="nav-btn" id="nav-recap" onclick="navigate('recap')">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+
+        <button id="nav-recap" onclick="navigate('recap')"
+                class="flex-1 flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer font-pixel text-[7px] text-dim transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
             RECAP
         </button>
+
     </div>
 
 </div><!-- /phone-frame -->
 
 <script>
-    // Navigation
+    const AVATARS = { Jordan:'👾', Alex:'🐸', Sam:'🦊', Maya:'🐼', Chris:'🐙' };
+
     function navigate(page) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        const targetPage = document.getElementById('page-' + page);
-        if (targetPage) targetPage.classList.add('active');
-        const targetNav = document.getElementById('nav-' + page);
-        if (targetNav) targetNav.classList.add('active');
-        // Scroll to top
+        ['home','stats','missions','recap'].forEach(id => {
+            const btn = document.getElementById('nav-' + id);
+            btn.classList.remove('text-accent');
+            btn.classList.add('text-dim');
+        });
+        document.getElementById('page-' + page).classList.add('active');
+        const active = document.getElementById('nav-' + page);
+        if (active) { active.classList.remove('text-dim'); active.classList.add('text-accent'); }
         document.querySelector('.screen').scrollTop = 0;
     }
 
     function goToProfile(name) {
-        const avatars = { Jordan:'👾', Alex:'🐸', Sam:'🦊', Maya:'🐼', Chris:'🐙' };
         document.getElementById('profile-name').textContent = name.toUpperCase();
         document.getElementById('profile-full-name').textContent = name;
-        // Could update avatar dynamically here
+        document.getElementById('profile-avatar').textContent = AVATARS[name] || '👤';
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-profile').classList.add('active');
         document.querySelector('.screen').scrollTop = 0;
     }
 
     function toggleCheck(el) {
-        if (el.classList.contains('done')) {
-            el.classList.remove('done');
+        const done = el.textContent.trim() === '✓';
+        if (done) {
             el.textContent = '';
+            el.classList.remove('border-neon','bg-neon/15','text-neon');
+            el.classList.add('border-dim');
         } else {
-            el.classList.add('done');
             el.textContent = '✓';
+            el.classList.remove('border-dim');
+            el.classList.add('border-neon','bg-neon/15','text-neon');
         }
     }
 
-    function switchStatTab(tab, btn) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        // Could swap content here
+    function switchTab(btn) {
+        btn.parentElement.querySelectorAll('button').forEach(b => {
+            b.classList.remove('bg-accent','text-white');
+            b.classList.add('text-dim','bg-transparent');
+        });
+        btn.classList.remove('text-dim','bg-transparent');
+        btn.classList.add('bg-accent','text-white');
     }
 
     // Animate progress bars on load
@@ -915,7 +708,7 @@
         document.querySelectorAll('.prog-fill').forEach(bar => {
             const target = bar.style.width;
             bar.style.width = '0%';
-            setTimeout(() => { bar.style.width = target; }, 200);
+            setTimeout(() => { bar.style.transition = 'width 1s cubic-bezier(.4,0,.2,1)'; bar.style.width = target; }, 300);
         });
     });
 </script>
